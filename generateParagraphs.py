@@ -1,6 +1,7 @@
 import os
 import json
 from openai import OpenAI
+import time
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_MCA"))
 
@@ -14,16 +15,11 @@ with open("paragraph_output_schema.json", "r") as jsonFile:
 
 # print(output_schema)
 
-#%%
-print(output_schema)
-#%%
-
 response = client.responses.create(
-    model="gpt-4o",
+    model="gpt-5",
     instructions=sysMsg,
     input=usrMsg,
     background=True,
-    temperature=0.9,
     text={
         "format": {
             "type": "json_schema",
@@ -34,6 +30,16 @@ response = client.responses.create(
     }
 )
 
+timeStart = time.time()
+while response.status in {"queued", "in_progress"}:
+    print(f"Current status: {response.status}")
+    time.sleep(5)
+    response = client.responses.retrieve(response.id)
+    print(response.status)
+    print(f"Elapsed time: {time.time() - timeStart}")
 
 #%%
-print(response.output_text)
+
+data = json.loads(response.output_text)  # parse to a dict (validates JSON)
+with open("database_03.json", "w", encoding="utf-8") as f:
+    json.dump(data, f, ensure_ascii=False, indent=2)
