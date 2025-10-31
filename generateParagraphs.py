@@ -33,7 +33,7 @@ while response.status in {"queued", "in_progress"}:
     print(f"Elapsed time: {(time.time() - timeStart):.2f} sec.")
     time.sleep(5)
 
-#%%
+#%% Save generated paragraphs to json and csv
 database_name = "database_06__50Texts"
 
 data = json.loads(response.output_text)  # parse to a dict (validates JSON)
