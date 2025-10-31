@@ -16,6 +16,6 @@ response = client.responses.create(
 #while response.status in {"queued", "in_progress"}:
  # print(f"Current status: {response.status}")
   #time.sleep(2)
-  #response = client.responses.retrieve(response.id)
-
-#print(response.output_text)
+#%%
+response = client.responses.retrieve(response.id)
+print(response.status)
