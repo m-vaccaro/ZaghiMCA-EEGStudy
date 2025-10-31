@@ -4,8 +4,8 @@
   "properties": {
     "items": {
       "type": "array",
-      "minItems": 5,
-      "maxItems": 5,
+      "minItems": 50,
+      "maxItems": 50,
       "items": {
         "type": "object",
         "additionalProperties": false,
