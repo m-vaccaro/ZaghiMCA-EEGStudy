@@ -2,6 +2,8 @@ import os
 import json
 from openai import OpenAI
 import time
+import pandas as pd
+from io import StringIO
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_MCA"))
 
@@ -15,18 +17,14 @@ with open("paragraph_output_schema.json", "r") as jsonFile:
 
 # print(output_schema)
 
+#%%
 response = client.responses.create(
-    model="gpt-5",
+    model="gpt-4o",
     instructions=sysMsg,
     input=usrMsg,
     background=True,
     text={
-        "format": {
-            "type": "json_schema",
-            "name": "math_response",
-            "schema":output_schema,
-            "strict": True
-        }
+        "format": {"type": "json_schema", "name": "math_response", "schema": output_schema, "strict": True}
     }
 )
 
@@ -36,10 +34,17 @@ while response.status in {"queued", "in_progress"}:
     time.sleep(5)
     response = client.responses.retrieve(response.id)
     print(response.status)
-    print(f"Elapsed time: {time.time() - timeStart}")
+    print(f"Elapsed time: {time.time() - timeStart}\n\n---\n")
 
 #%%
+database_name = "database_04"
 
 data = json.loads(response.output_text)  # parse to a dict (validates JSON)
-with open("database_03.json", "w", encoding="utf-8") as f:
+with open(f"{database_name}.json", "w", encoding="utf-8") as f:
     json.dump(data, f, ensure_ascii=False, indent=2)
+
+# Save to a CSV
+data = json.loads(response.output_text)
+
+df = pd.json_normalize(data['items'])   # Normalize the items array (this flattens the nested 'style' dict)
+df.to_csv(f"{database_name}.csv", index=False)    # save file
