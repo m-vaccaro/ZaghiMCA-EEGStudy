@@ -12,7 +12,7 @@ paragraph_list = all_paragraphs['paragraph'].tolist()
 
 #%% Create embeddings
 embeddings_out = client.embeddings.create(
-    model="text-embedding-3-large",
+    model="text-embedding-3-small",
     input=paragraph_list
 )
 
@@ -23,5 +23,5 @@ for i in range(len(embeddings_out.data)):
     embeddings_all.append(embeddings_out.data[i].embedding)
 
 #%%
-df = pd.DataFrame({"embeddings": embeddings_all})
-df.to_csv("embeddings.csv", index=False)
+df = pd.DataFrame(embeddings_all)
+df.to_excel("embeddings.xlsx")
