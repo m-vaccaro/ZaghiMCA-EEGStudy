@@ -23,5 +23,8 @@ for i in range(len(embeddings_out.data)):
     embeddings_all.append(embeddings_out.data[i].embedding)
 
 #%%
-df = pd.DataFrame(embeddings_all)
-df.to_excel("embeddings.xlsx")
+df = pd.DataFrame({"embedding": [list(x) for x in embeddings_all]})
+df.to_csv("embeddings.csv")
+
+all_paragraphs = all_paragraphs.assign(embedding=[list(x) for x in embeddings_all])
+all_paragraphs.to_csv("database_with_embeddings__50Texts.csv")

@@ -3,14 +3,18 @@ import json
 from openai import OpenAI
 import time
 import pandas as pd
-from io import StringIO
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_MCA"))
 
-# Define messages
-sysMsg = "You are generating a large library of single-paragraph texts to maximize semantic, stylistic, and lexical diversity for EEG reading experiments. Hard constraints:\n-Exactly one paragraph per item, 100 to 150 words, no lists or headings.\n-No personal data, hate, sexual content, medical or legal advice, or partisan politics; keep topics neutral and classroom-safe.\n-Each item must be meaningfully different from earlier items in topic, rhetorical mode, tone, register, pacing, and lexical choice; avoid repeated phrasings and cliches.\n-Do not self-reference, do not explain what you’re doing.\n-Output as JSON Lines, one object per paragraph, matching the provided JSON Schema.\n\nDiversity axes to systematically cover:\n-Domain (rotate evenly): {life_sciences, physical_sciences, engineering, computing, humanities, social_sciences, everyday_scenarios, nature_travel, arts_culture}\n-Rhetorical mode: {narrative, expository, descriptive, process_explanation, persuasive}\n-Tone / register: {plain, formal, technical, playful, reflective, conversational}\n-Reading level (targeted): {Grade8, Grade12, Undergraduate, Graduate}. Approximate by sentence length, vocabulary, and syntax\n-Style knobs (choose a setting each time): sentence_length={short, mixed, long}, figurative_language={none, low, medium, high}, concreteness={abstract, mixed, concrete}, viewpoint={1st, 2nd, 3rd}, temporal_focus={past, present, future}.\n\nQuality rules:\n-Keep facts generic or obviously illustrative; avoid controversial specifics.\n-Prefer fresh imagery and varied verbs; rotate discourse markers and clause structure.\n-Ensure coherence in ~120 words; no dangling references or unexplained jargon."
+# List of topics to generate texts for: life_sciences, physical_sciences, engineering, computing, humanities,
+# social_sciences, everyday_scenarios, nature_travel, arts_culture
+topic = "arts_culture"
 
-usrMsg = "Generate exactly 50 items. Cycle through the domain × mode × tone × reading_level grid before repeating any combination. Randomize style knobs each time. For each item, invent a new micro-scenario and vocabulary set; avoid reusing salient bigrams (other than stop-words). Keep each paragraph between 100 and 150 words long. Output one JSON object per line as specified, with no extra text."
+# Define messages
+sysMsg = f"You are generating a large library of single-paragraph texts to maximize semantic, stylistic, and lexical diversity for EEG reading experiments. Hard constraints:\n-Exactly one paragraph per item, 100 to 150 words, no lists or headings.\n-No personal data, hate, sexual content, medical or legal advice, or partisan politics; keep topics neutral and classroom-safe.\n-Each item must be meaningfully different from earlier items in topic, rhetorical mode, tone, register, pacing, and lexical choice; avoid repeated phrasings and cliches.\n-Do not self-reference, do not explain what you’re doing.\n-Output as JSON Lines, one object per paragraph, matching the provided JSON Schema.\n\nDiversity axes to systematically cover:\n-You will be responsible for generating information across domains like [life_sciences, physical_sciences, engineering, computing, humanities, social_sciences, everyday_scenarios, nature_travel, arts_culture]. Focus on {topic} topics **only** for this generation\n-Rhetorical mode: [narrative, expository, descriptive, process_explanation, persuasive]\n-Tone / register: [plain, formal, technical, playful, reflective, conversational]\n-Reading level (targeted): [Grade8, Grade12, Undergraduate, Graduate]. Approximate by sentence length, vocabulary, and syntax\n-Style knobs (choose a setting each time): sentence_length=[short, mixed, long], figurative_language=[none, low, medium, high], concreteness=[abstract, mixed, concrete], viewpoint=[1st, 2nd, 3rd], temporal_focus=[past, present, future].\n\nQuality rules:\n-Keep facts generic or obviously illustrative; avoid controversial specifics.\n-Prefer fresh imagery and varied verbs; rotate discourse markers and clause structure.\n-Ensure coherence in 100 to 150 words; no dangling references or unexplained jargon."
+
+usrMsg = "Generate exactly 75 items. Cycle through the domain × mode × tone × reading_level grid before repeating any combination. Randomize style knobs each time. For each item, invent a new micro-scenario and vocabulary set; avoid reusing salient bigrams (other than stop-words). Keep each paragraph between 100 and 150 words long. Output one JSON object per line as specified, with no extra text."
+
 
 with open("paragraph_output_schema.json", "r") as jsonFile:
     output_schema = json.load(jsonFile)
@@ -32,9 +36,11 @@ while response.status in {"queued", "in_progress"}:
     print(response.status)
     print(f"Elapsed time: {(time.time() - timeStart):.2f} sec.")
     time.sleep(5)
+    response = client.responses.retrieve(response.id)
+    print(response.status)
 
 #%% Save generated paragraphs to json and csv
-database_name = "database_06__50Texts"
+database_name = "database_07__SetBy75-Part9"
 
 data = json.loads(response.output_text)  # parse to a dict (validates JSON)
 with open(f"{database_name}.json", "w", encoding="utf-8") as f:
