@@ -32,7 +32,9 @@ import matplotlib.pyplot as plt
 import matplotlib
 from ast import literal_eval
 
-database = pd.read_csv("./database_storage/database_with_embeddings__50Texts.csv")
+database_number = 7
+
+database = pd.read_csv(f"./database_storage/database_{database_number:02d}_with_embeddings.csv")
 embedding_matrix = np.array(database.embedding.apply(literal_eval).to_list())
 
 domains = ["life_sciences","physical_sciences","engineering","computing",
@@ -46,10 +48,10 @@ database["domain_id"] = database["domain"].astype(str).str.strip().str.lower().a
 
 # Specify hyperparameters:
 final_dims = 2 # Number of dimensions for the final transformation
-perplex = 15 # Perplexity
+perplex = 16 # Perplexity
 r_state = 17 # Set a random state for repeatable results. NOTE: Different initializations can result in different local minima, so test stability
 initialization = 'random' # Initialization of embedding (random or pca). PCA initialization is usually more globally stable.
-l_rate = 10 # Learning rate
+l_rate = 40 # Learning rate
 
 # Create a t-SNE model with scikit learn
 tsne = TSNE(n_components=final_dims, perplexity=perplex, init=initialization, learning_rate=l_rate, random_state=r_state)

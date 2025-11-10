@@ -1,13 +1,14 @@
 #%% Import packages
 import os
-import openai
 from openai import OpenAI
 import pandas as pd
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_MCA"))
 
+database_number = 7
+
 # Compile the paragraphs in a list to create a batch embedding request API request.
-all_paragraphs = pd.read_csv("./database_storage/database_06__50Texts.csv")
+all_paragraphs = pd.read_csv(f"./database_storage/database_{database_number:02d}__combined.csv")
 paragraph_list = all_paragraphs['paragraph'].tolist()
 
 #%% Create embeddings
@@ -27,4 +28,4 @@ df = pd.DataFrame({"embedding": [list(x) for x in embeddings_all]})
 df.to_csv("embeddings.csv")
 
 all_paragraphs = all_paragraphs.assign(embedding=[list(x) for x in embeddings_all])
-all_paragraphs.to_csv("database_with_embeddings__50Texts.csv")
+all_paragraphs.to_csv(f"database_{database_number:02d}_with_embeddings.csv")
