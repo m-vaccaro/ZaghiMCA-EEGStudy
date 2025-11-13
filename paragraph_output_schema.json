@@ -4,8 +4,8 @@
   "properties": {
     "items": {
       "type": "array",
-      "minItems": 75,
-      "maxItems": 75,
+      "minItems": 35,
+      "maxItems": 35,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -69,7 +69,7 @@
             ]
           },
           "title": { "type": "string" },
-          "paragraph": { "type": "string", "minLength": 600, "maxLength": 1100 }
+          "paragraph": { "type": "string", "minLength": 600, "maxLength": 4000 }
         },
         "required": [
           "domain",

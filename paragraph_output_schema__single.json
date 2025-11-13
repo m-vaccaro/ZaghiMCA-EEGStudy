@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {"type": "string"},
+    "text": {"type": "string", "minLength": 600, "maxLength": 5000},
+    "domain": {"enum": ["life_sciences","physical_sciences","engineering","computing",
+                        "humanities","social_sciences","everyday_scenarios","nature_travel","arts_culture"]},
+    "mode": {"enum": ["narrative","expository","descriptive","process_explanation","persuasive"]},
+    "tone": {"enum": ["plain","formal","technical","playful","reflective","conversational"]},
+    "reading_level": {"enum": ["Grade8","Grade12","Undergraduate","Graduate"]},
+    "style": {
+      "type": "object", "additionalProperties": false, "required": [
+        "sentence_length","figurative_language","concreteness","viewpoint","temporal_focus"
+      ],
+      "properties": {
+        "sentence_length": {"enum": ["short","mixed","long"]},
+        "figurative_language": {"enum": ["none","low","medium","high"]},
+        "concreteness": {"enum": ["abstract","mixed","concrete"]},
+        "viewpoint": {"enum": ["1st","2nd","3rd"]},
+        "temporal_focus": {"enum": ["past","present","future"]}
+      }
+    },
+    "topic": {"type": "string"},
+    "word_count": {"type": "integer"},
+    "sentence_count": {"type": "integer"},
+    "keywords": {"type": "array", "items": {"type":"string"}, "minItems": 3, "maxItems": 5},
+    "seed": {"type": "integer"}
+  },
+  "required": ["id","text","domain","mode","tone","reading_level","style","topic","word_count","sentence_count","keywords","seed"]
+}
