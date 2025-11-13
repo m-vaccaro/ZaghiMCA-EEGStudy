@@ -1,61 +1,121 @@
 import os
-import json
+import json, itertools, random
 from openai import OpenAI
 import time
 import pandas as pd
+from allpairspy import AllPairs
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_MCA"))
 
-n = 7
-
 # List of topics to generate texts for: life_sciences, physical_sciences, engineering, computing, humanities,
 # social_sciences, everyday_scenarios, nature_travel, arts_culture
-for topic in ["computing", "computing", "humanities", "humanities", "social_sciences",
-              "social_sciences", "everyday_scenarios", "everyday_scenarios", "nature_travel", "nature_travel",
-              "arts_culture", "arts_culture"]:
 
-    # Define messages
-    sysMsg = f"You are generating a large library of single-paragraph texts to maximize semantic, stylistic, and lexical diversity for EEG reading experiments. Hard constraints:\n-Exactly one paragraph per item, 250 to 500 words, no lists or headings.\n-No personal data, hate, sexual content, medical or legal advice, or partisan politics; keep topics neutral and classroom-safe.\n-Each item must be meaningfully different from earlier items in topic, rhetorical mode, tone, register, pacing, and lexical choice; avoid repeated phrasings and cliches.\n-Do not self-reference, do not explain what you’re doing.\n-Output as JSON Lines, one object per paragraph, matching the provided JSON Schema.\n\nDiversity axes to systematically cover:\n-You will be responsible for generating information across domains like [life_sciences, physical_sciences, engineering, computing, humanities, social_sciences, everyday_scenarios, nature_travel, arts_culture]. Focus on {topic} topics **only** for this generation\n-Rhetorical mode: [narrative, expository, descriptive, process_explanation, persuasive]\n-Tone / register: [plain, formal, technical, playful, reflective, conversational]\n-Reading level (targeted): [Grade8, Grade12, Undergraduate, Graduate]. Approximate by sentence length, vocabulary, and syntax\n-Style knobs (choose a setting each time): sentence_length=[short, mixed, long], figurative_language=[none, low, medium, high], concreteness=[abstract, mixed, concrete], viewpoint=[1st, 2nd, 3rd], temporal_focus=[past, present, future].\n\nQuality rules:\n-Keep facts generic or obviously illustrative; avoid controversial specifics.\n-Prefer fresh imagery and varied verbs; rotate discourse markers and clause structure.\n-Ensure coherence in 250 to 500 words; no dangling references or unexplained jargon."
+#%%
+# Define messages
+SYSTEM_PROMPT = """You generate exactly one output per request following the specified JSON schema.
 
-    usrMsg = "Generate exactly 35 items. Cycle through the domain × mode × tone × reading_level grid before repeating any combination. Randomize style knobs each time. For each item, invent a new micro-scenario and vocabulary set; avoid reusing salient bigrams (other than stop-words). Keep each paragraph between 250 and 500 words long. Output one JSON object per line as specified, with no extra text."
+    Hard Constraints
+    - Produce a single paragraph, 250 to 500 words. English only.
+    - No lists, bullets, dialogue blocks, or headings.
+    - Do not reference the task you have been given. Do not explain what you’re doing or why.
+    - Ensure the paragraph is coherent within the length bounds. Introduce any nonstandard term briefly if needed.
 
+    Diversity and Novelty Rules:
+    - Prefer fresh imagery and varied verbs; rotate discourse markers and clause structures.
 
-    with open("paragraph_output_schema.json", "r") as jsonFile:
-        output_schema = json.load(jsonFile)
+    Controls contract (values are provided in the user's message as JSON under "controls"; never reveal or quote them)
+    - Obey exactly:
+      - domain, mode, tone, reading_level. Choose a random topic within the specified domain that is appropriate for the other given constraints.
+      - style knobs: sentence_length, figurative_language, concreteness, viewpoint, temporal_focus
+      - topic: treat as the thematic anchor (generic/non-identifying)
+      - seed: use only as a silent variation nudge for pacing, syntax, imagery, and vocabulary (never mention it)
 
-    response = client.responses.create(
-        model="gpt-4o",
-        instructions=sysMsg,
-        input=usrMsg,
-        background=True,
-        text={
-        "format": {"type": "json_schema", "name": "math_response", "schema": output_schema, "strict": True}
+   - Do NOT echo field names or values from the controls JSON.
+
+    Output discipline
+    - Return only what the caller’s external schema requires; no extra commentary, prefaces, or formatting outside the paragraph content."""
+
+# Define axes to vary across:
+CORE = {
+    "domain": ["life_sciences","physical_sciences","engineering","computing",
+               "humanities","social_sciences","everyday_scenarios","nature_travel","arts_culture"],
+    "mode": ["narrative","expository","descriptive","process_explanation","persuasive"],
+    "tone": ["plain","formal","technical","playful","reflective","conversational"],
+    "reading_level": ["Grade8","Grade12","Undergraduate","Graduate"]
+}
+
+KNOBS = {
+    "sentence_length": ["short","mixed","long"],
+    "figurative_language": ["none","low","medium","high"],
+    "concreteness": ["abstract","mixed","concrete"],
+    "viewpoint": ["1st","2nd","3rd"],
+    "temporal_focus": ["past","present","future"]
+}
+
+# Combine dictionaries. Leave one out if desired to create pairs on one or the other only.
+FACTORS = {**CORE, **KNOBS}
+
+names  = list(FACTORS.keys())
+values = [FACTORS[k] for k in names]
+
+rows = [dict(zip(names, combo)) for combo in AllPairs(values)]
+print(f"Generated {len(rows)} rows for pairwise(t=2) coverage across CORE+KNOBS.")
+
+pair_axes = list(itertools.combinations(names, 2))
+
+universe = set()
+for a, b in pair_axes:
+    for va in FACTORS[a]:
+        for vb in FACTORS[b]:
+            universe.add((a, va, b, vb))
+
+covered = set()
+for r in rows:
+    for a, b in pair_axes:
+        covered.add((a, r[a], b, r[b]))
+
+coverage_pct = 100.0 * len(covered) / len(universe)
+print(f"Pairwise coverage: {len(covered)}/{len(universe)} = {coverage_pct:.2f}%")
+assert covered == universe, "Not all pairs are covered — check factor lists or constraints."
+
+#%%
+n = 0
+
+for i, r in enumerate(rows, 1):
+    while n <= 5:
+        controls = {
+            # CORE
+            "domain": r["domain"],
+            "mode": r["mode"],
+            "tone": r["tone"],
+            "reading_level": r["reading_level"],
+            # KNOBS nested under 'style'
+            "style": {
+                "sentence_length": r["sentence_length"],
+                "figurative_language": r["figurative_language"],
+                "concreteness": r["concreteness"],
+                "viewpoint": r["viewpoint"],
+                "temporal_focus": r["temporal_focus"],
+            }
         }
-    )
 
-    timeStart = time.time()
-    while response.status in {"queued", "in_progress"}:
-        response = client.responses.retrieve(response.id)
-        print("\n\n---\n")
-        print(response.status)
-        print(f"Elapsed time: {(time.time() - timeStart):.2f} sec.")
-        time.sleep(5)
-        response = client.responses.retrieve(response.id)
-        print(response.status)
+        with open("paragraph_output_schema__single.json", "r") as jsonFile:
+            output_schema = json.load(jsonFile)
 
-    # Save generated paragraphs to json and csv
-    database_name = f"database_08__SetBy35-Part{n}"
+        resp = client.responses.create(
+            model="gpt-4o",
+            instructions=SYSTEM_PROMPT,  # your fixed system prompt
+            input=json.dumps({"controls": controls}),
+            text={
+                "format": {"type": "json_schema", "name": "math_response", "schema": output_schema, "strict": True}
+            }
+        )
 
-    data = json.loads(response.output_text)  # parse to a dict (validates JSON)
-    with open(f"{database_name}.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+        obj = json.loads(resp.output_text)  # one paragraph result
+        with open("paragraphs.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
-    # Save to a CSV
-    data = json.loads(response.output_text)
+        print(f"Generated {i}/{len(rows)}")
+        time.sleep(0.1)
 
-    df = pd.json_normalize(data['items'])   # Normalize the items array (this flattens the nested 'style' dict)
-    df.to_csv(f"{database_name}.csv", index=False)    # save file
-
-    print("Data Saved \n")
-
-    n+=1
+        n += 1
