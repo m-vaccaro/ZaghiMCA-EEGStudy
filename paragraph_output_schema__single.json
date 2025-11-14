@@ -2,8 +2,7 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "id": {"type": "string"},
-    "text": {"type": "string", "minLength": 600, "maxLength": 5000},
+    "text": {"type": "string"},
     "domain": {"enum": ["life_sciences","physical_sciences","engineering","computing",
                         "humanities","social_sciences","everyday_scenarios","nature_travel","arts_culture"]},
     "mode": {"enum": ["narrative","expository","descriptive","process_explanation","persuasive"]},
@@ -22,10 +21,7 @@
       }
     },
     "topic": {"type": "string"},
-    "word_count": {"type": "integer"},
-    "sentence_count": {"type": "integer"},
-    "keywords": {"type": "array", "items": {"type":"string"}, "minItems": 3, "maxItems": 5},
-    "seed": {"type": "integer"}
+    "keywords": {"type": "array", "items": {"type":"string"}, "minItems": 3, "maxItems": 5}
   },
-  "required": ["id","text","domain","mode","tone","reading_level","style","topic","word_count","sentence_count","keywords","seed"]
+  "required": ["text","domain","mode","tone","reading_level","style","topic","keywords"]
 }
