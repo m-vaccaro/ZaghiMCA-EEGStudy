@@ -60,7 +60,7 @@ canonical_names = list(FACTORS.keys())
 
 # num_runs independent t=3 runs over FACTORS, then merge + deduplicate
 
-num_runs = 1          # bump this to 10–20 if you want a bigger, richer pool
+num_runs = 2          # bump this to 10–20 if you want a bigger, richer pool
 base_seed = 23498     # change to vary the sequence
 
 rows_all = []
@@ -216,4 +216,4 @@ for i, r in enumerate(rows_all, 1):
 
 #%% Load JSONL, flatten nested fields (e.g., style.*), and save to CSV
 df = pd.json_normalize(pd.read_json("paragraphs.jsonl", lines=True).to_dict(orient="records"))
-df.to_csv("database_10-gpt4o-test.csv", index=False)
+df.to_csv("./database_storage/database_11-gpt4o-full.csv", index=False)
