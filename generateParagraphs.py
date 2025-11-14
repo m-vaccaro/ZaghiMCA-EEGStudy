@@ -111,7 +111,17 @@ for col in col_order:
 
 
 #%%
-duration_total = 0
+
+# Load output schema
+with open("paragraph_output_schema__single.json", "r", encoding="utf-8") as jf:
+    output_schema = json.load(jf)
+
+# Add a method to handle exceptions thrown by improper JSON formatting
+MAX_RETRIES = 4
+BACKOFF_SEC = [0.5, 1, 2, 4]  # wait times of retries in case of errors associated with rate limits, etc.
+
+duration_total = 0.0
+N_total = len(rows_all)
 
 for i, r in enumerate(rows_all, 1):
     startTime = time.time()
@@ -132,37 +142,77 @@ for i, r in enumerate(rows_all, 1):
         }
     }
 
-    with open("paragraph_output_schema__single.json", "r") as jsonFile:
-        output_schema = json.load(jsonFile)
+    success = False
+    raw = None  # for debug saves
 
-    resp = client.responses.create(
-        model="gpt-4o",
-        instructions=SYSTEM_PROMPT,  # your fixed system prompt
-        input=json.dumps({"controls": controls}),
-        text={
-            "format": {"type": "json_schema", "name": "math_response", "schema": output_schema, "strict": True}
-        }
-    )
+    for attempt in range(MAX_RETRIES):
+        try:
+            resp = client.responses.create(
+                model="gpt-4o",
+                instructions=SYSTEM_PROMPT,
+                input=json.dumps({"controls": controls}),
+                text={
+                    "format": {
+                        "type": "json_schema",
+                        "name": "eeg_paragraph",
+                        "schema": output_schema,
+                        "strict": True
+                    }
+                }
+            )
 
-    obj = json.loads(resp.output_text)  # one paragraph result
-    with open("paragraphs.jsonl", "a", encoding="utf-8") as f:
-        f.write(json.dumps(obj, ensure_ascii=False) + "\n")
+            # Prefer parsed content if available; otherwise parse the text
+            if getattr(resp, "output", None):
+                block = resp.output[0].content[0]
+                if getattr(block, "parsed", None):
+                    obj = block.parsed
+                else:
+                    raw = getattr(block, "text", None)
+                    obj = json.loads(raw)
+            else:
+                raw = resp.output_text
+                obj = json.loads(raw)
+
+            # (optional) sanity checks
+            assert obj.get("domain") == controls["domain"], "Domain mismatch"
+            assert isinstance(obj.get("text"), str) and len(obj["text"]) > 0, "Missing text"
+
+            # Save result
+            with open("paragraphs.jsonl", "a", encoding="utf-8") as f:
+                f.write(json.dumps(obj, ensure_ascii=False) + "\n")
+
+            success = True
+            break  # exit retry loop
+
+        except json.JSONDecodeError as e:
+            dbg_path = f"debug_response_{i}_try{attempt+1}.txt"
+            try:
+                with open(dbg_path, "w", encoding="utf-8") as dbg:
+                    dbg.write(raw if raw is not None else "<no raw text available>")
+                print(f"[warn] JSON parse failed at item {i} (try {attempt+1}): {e}. Saved {dbg_path}")
+            except Exception:
+                print(f"[warn] JSON parse failed at item {i} (try {attempt+1}): {e}. (Could not save debug file.)")
+            time.sleep(BACKOFF_SEC[min(attempt, len(BACKOFF_SEC)-1)])
+
+        except Exception as e:
+            # Network/timeout/rate-limit/etc.
+            print(f"[warn] API error at item {i} (try {attempt+1}): {e}")
+            time.sleep(BACKOFF_SEC[min(attempt, len(BACKOFF_SEC)-1)])
 
     endTime = time.time()
     duration = endTime - startTime
-
     duration_total += duration
     duration_average = duration_total / i
+    numRemaining = N_total - i
+    tRemaining = (numRemaining * duration_average) / 60
 
-    numRemaining = len(rows_all) - i
-    tRemaining = (numRemaining * duration_average)/60
+    if success:
+        print(f"Generated {i}/{N_total} in {duration:.2f}s. Approx. {tRemaining:.2f} min remaining.")
+    else:
+        print(f"[skip] Item {i} skipped after {MAX_RETRIES} attempts. Approx. {tRemaining:.2f} min remaining.")
 
-    print(f"Generated {i}/{len(rows_all)} in {duration:.2f} seconds. Approximately {tRemaining:.2f} minutes remaining.")
+    time.sleep(0.1)  # tiny pause to be gentle on rate limits
 
-    time.sleep(0.1)
-
-#    if i >= 6:
-#        break
 
 #%% Load JSONL, flatten nested fields (e.g., style.*), and save to CSV
 df = pd.json_normalize(pd.read_json("paragraphs.jsonl", lines=True).to_dict(orient="records"))
