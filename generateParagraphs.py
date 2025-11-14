@@ -15,7 +15,7 @@ SYSTEM_PROMPT = """You generate exactly one output per request following the spe
 
     Hard Constraints
     - Produce a single paragraph only.
-    - Make sure the paragraph is between 250 and 500 words. 
+    - Make sure the paragraph is between 150 and 500 words. 
     - Write in English only.
     - No lists, bullets, dialogue blocks, or headings.
     - Do not reference the task you have been given. Do not explain what you’re doing or why.
@@ -61,7 +61,7 @@ canonical_names = list(FACTORS.keys())
 # num_runs independent t=3 runs over FACTORS, then merge + deduplicate
 
 num_runs = 1          # bump this to 10–20 if you want a bigger, richer pool
-base_seed = 98431     # change to vary the sequence
+base_seed = 23498     # change to vary the sequence
 
 rows_all = []
 seen = set()
