@@ -123,6 +123,8 @@ BACKOFF_SEC = [0.5, 1, 2, 4]  # wait times of retries in case of errors associat
 duration_total = 0.0
 N_total = len(rows_all)
 
+global_start = time.time()
+
 for i, r in enumerate(rows_all, 1):
     startTime = time.time()
 
@@ -148,9 +150,12 @@ for i, r in enumerate(rows_all, 1):
     for attempt in range(MAX_RETRIES):
         try:
             resp = client.responses.create(
-                model="gpt-4o",
+                model="gpt-5.1",
                 instructions=SYSTEM_PROMPT,
                 input=json.dumps({"controls": controls}),
+                reasoning={
+                    "effort": "low"
+                },
                 text={
                     "format": {
                         "type": "json_schema",
@@ -205,9 +210,10 @@ for i, r in enumerate(rows_all, 1):
     duration_average = duration_total / i
     numRemaining = N_total - i
     tRemaining = (numRemaining * duration_average) / 60
+    tTotal = (time.time() - global_start) / 60
 
     if success:
-        print(f"Generated {i}/{N_total} in {duration:.2f}s. Approx. {tRemaining:.2f} min remaining.")
+        print(f"Generated {i}/{N_total} in {duration:.2f}s. // Approx. {tRemaining:.2f} min remaining. // Total time: {tTotal:.2f} min.")
     else:
         print(f"[skip] Item {i} skipped after {MAX_RETRIES} attempts. Approx. {tRemaining:.2f} min remaining.")
 
