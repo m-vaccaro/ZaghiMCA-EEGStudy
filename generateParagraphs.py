@@ -166,24 +166,48 @@ for i, r in enumerate(rows_all, 1):
                 }
             )
 
-            # Prefer parsed content if available; otherwise parse the text
-            if getattr(resp, "output", None):
-                block = resp.output[0].content[0]
-                if getattr(block, "parsed", None):
-                    obj = block.parsed
-                else:
-                    raw = getattr(block, "text", None)
-                    obj = json.loads(raw)
-            else:
-                raw = resp.output_text
+            # ---- robust extraction across response shapes ----
+            obj = None
+            raw = getattr(resp, "output_text", None)
+
+            # New Responses shape
+            out_list = getattr(resp, "output", None)
+            if obj is None and isinstance(out_list, list) and out_list:
+                content = getattr(out_list[0], "content", None)
+                if isinstance(content, list) and content:
+                    frag = content[0]
+                    parsed = getattr(frag, "parsed", None)
+                    if parsed is not None:
+                        obj = parsed
+                    else:
+                        raw = getattr(frag, "text", raw)
+
+            # Legacy chat-like fallback
+            if obj is None and (raw is None) and hasattr(resp, "choices"):
+                msg = getattr(resp.choices[0], "message", None)
+                if msg is not None:
+                    parsed = getattr(msg, "parsed", None)
+                    if parsed is not None:
+                        obj = parsed
+                    else:
+                        raw = getattr(msg, "content", raw)
+
+            # Final parse
+            if obj is None:
+                if raw is None:
+                    raise ValueError("No JSON text available in response.")
+                if isinstance(raw, (bytes, bytearray)):
+                    raw = raw.decode("utf-8", "replace")
                 obj = json.loads(raw)
+            # ---- end extraction ----
 
             # (optional) sanity checks
             assert obj.get("domain") == controls["domain"], "Domain mismatch"
             assert isinstance(obj.get("text"), str) and len(obj["text"]) > 0, "Missing text"
+            assert resp.incomplete_details is None
 
             # Save result
-            with open("paragraphs.jsonl", "a", encoding="utf-8") as f:
+            with open("paragraphs_gpt5_1.jsonl", "a", encoding="utf-8") as f:
                 f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
             success = True
@@ -221,5 +245,5 @@ for i, r in enumerate(rows_all, 1):
 
 
 #%% Load JSONL, flatten nested fields (e.g., style.*), and save to CSV
-df = pd.json_normalize(pd.read_json("paragraphs.jsonl", lines=True).to_dict(orient="records"))
-df.to_csv("./database_storage/database_11-gpt4o-full.csv", index=False)
+df = pd.json_normalize(pd.read_json("paragraphs_gpt5_1.jsonl", lines=True).to_dict(orient="records"))
+df.to_csv("./database_storage/database_12-gpt5_1-full.csv", index=False)
