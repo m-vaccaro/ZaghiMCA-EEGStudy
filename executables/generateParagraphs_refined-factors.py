@@ -11,54 +11,76 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_MCA"))
 # social_sciences, everyday_scenarios, nature_travel, arts_culture
 
 # Define messages
-SYSTEM_PROMPT = """You generate exactly one output per request following the specified JSON schema.
+SYSTEM_PROMPT = """You generate single-paragraph texts and a small amount of metadata following the given JSON format.
 
-    Hard Constraints
-    - Produce a single paragraph only.
-    - Make sure the paragraph is between 150 and 500 words. 
-    - Write in English only.
-    - No lists, bullets, dialogue blocks, or headings.
-    - Do not reference the task you have been given. Do not explain what you’re doing or why.
-    - Ensure the paragraph is coherent within the length bounds. Introduce any nonstandard term briefly if needed.
+HARD CONSTRAINTS:
+- Always output a single JSON object as your entire response.
+- The JSON must have these fields: text, genre, difficulty, coherence_predictability, emotional_valence, concreteness, topic_hint, tone, keywords.
+- The value of "text" must be exactly one paragraph of continuous prose (no headings, no bullet points, no dialogue formatting).
+- Length of "text": between 250 and 400 words.
+- Do NOT mention instructions, labels, field names, or any metadata in the paragraph.
+- The paragraph must be self-contained and understandable on its own.
 
-    Diversity and Novelty Rules:
-    - Prefer fresh imagery and varied verbs; rotate discourse markers and clause structures.
+GENERAL CONTEXT:
+- Paragraphs should involve STEM or academic themes (science, technology, engineering, mathematics, study, research, or student life), guided by the topic_hint the user provides.
 
-    Controls contract (values are provided in the user's message as JSON under "controls"; never reveal or quote them)
-    - Obey exactly:
-      - domain, mode, tone, reading_level. Choose a random topic within the specified domain that is appropriate for the other given constraints.
-      - style knobs: sentence_length, figurative_language, concreteness, viewpoint, temporal_focus
-      - topic: treat as the thematic anchor (generic/non-identifying)
-      - seed: use only as a silent variation nudge for pacing, syntax, imagery, and vocabulary (never mention it)
+FIELD INTERPRETATION:
+Interpret each field of the input as follows:
+- "genre":
+  - "narrative": a short story or scene with at least one character and some change, decision, or outcome.
+  - "expository": an informative explanation, description, or analysis of a concept, process, or situation.
 
-   - Do NOT echo field names or values from the controls JSON.
+- "difficulty":
+  - "low": similar to non-fiction written for roughly middle school grades; short, simple sentences, common vocabulary, simple ideas, minimal jargon.
+  - "medium": similar to non-fiction written for late high school or early college; moderate sentence length, some technical or abstract terms, concepts that require some effort.
+  - "high": similar to advanced undergraduate or graduate-level material; longer and more complex sentences, dense information, frequent technical or abstract terminology.
 
-    Output discipline
-    - Return only what the caller’s external schema requires; no extra commentary, prefaces, or formatting outside the paragraph content."""
+- "coherence_predictability":
+  - "high_coherence_high_predictability": the paragraph flows logically and the main point or ending feels natural and expected.
+  - "high_coherence_low_predictability": the paragraph is logically coherent, but the final implication or twist is somewhat surprising while still plausible.
+  - "low_coherence": all sentences are grammatically correct and broadly on the same general topic, but the flow is hard to follow (jumps in logic or missing links). Avoid obvious nonsense.
+
+- "emotional_valence":
+  - "negative": difficulties, setbacks, worry, or frustration.
+  - "neutral": detached, matter-of-fact tone with little emotion.
+  - "positive": curiosity, progress, satisfaction, or hope.
+
+- "concreteness":
+  - "abstract": mostly ideas, theories, principles, and general patterns, with few sensory details.
+  - "mixed": a blend of abstract ideas and concrete examples.
+  - "concrete": many specific objects, actions, places, or sensory details.
+
+- "tone":
+  - "plain": neutral, textbook-like, clear and straightforward.
+  - "technical": more formal and jargon-heavy, closer to a scientific article or advanced textbook.
+  - "reflective": slightly introspective or thoughtful, discussing experiences, challenges, or implications.
+
+- "topic_hint":
+  - Use the given topic area as a loose guide to the subject matter.
+
+GENERAL BEHAVIOR:
+- Treat the user-provided values for genre, difficulty, coherence_predictability, emotional_valence, concreteness, tone, and topic_hint as hard requirements.
+- Do not explain your choices; just produce the JSON object."""
 
 # Define axes to vary across:
-CORE = {
-    "domain": ["life_sciences","physical_sciences","engineering","computing",
-               "humanities","social_sciences","everyday_scenarios","nature_travel","arts_culture"],
-    "mode": ["narrative","expository","descriptive","process_explanation","persuasive"],
-    "tone": ["plain","formal","technical","playful","reflective","conversational"],
-    "reading_level": ["Grade8","Grade12","Undergraduate","Graduate"]
+FACTORS = {
+    "genre": ["narrative", "expository"],
+    "difficulty": ["low", "medium", "high"],
+    "coherence_predictability": ["high_coherence_high_predictability", "high_coherence_low_predictability", "low_coherence"],
+    "emotional_valence": ["negative", "neutral", "positive"],
+    "concreteness": ["abstract", "mixed", "concrete"],
+    "tone": ["plain", "technical", "reflective"]
 }
 
-KNOBS = {
-    "sentence_length": ["short","mixed","long"],
-    "figurative_language": ["none","low","medium","high"],
-    "concreteness": ["abstract","mixed","concrete"],
-    "viewpoint": ["1st","2nd","3rd"],
-    "temporal_focus": ["past","present","future"]
-}
-
-# Combine dictionaries. Leave one out if desired to create pairs on one or the other only.
-FACTORS = {**CORE, **KNOBS}
+TOPIC_HINTS = ["life_sciences",
+               "physical_sciences",
+               "engineering",
+               "computing"]
 
 canonical_names = list(FACTORS.keys())
 
-# num_runs independent t=3 runs over FACTORS, then merge + deduplicate
+# num_runs independent t=6 runs over FACTORS, then merge + deduplicate
+# Note: If t = num. factors, then the space necessarily covers all possible combinations.
 
 num_runs = 2          # bump this to 10–20 if you want a bigger, richer pool
 base_seed = 23498     # change to vary the sequence
@@ -76,10 +98,10 @@ for run in range(num_runs):
     for k in canonical_names:
         rng.shuffle(value_orders[k])
 
-    # build a t=3 covering array for this ordering
+    # build a t=6 covering array for this ordering
     params = {name: value_orders[name] for name in name_order}
-    ca = CoveringArray(params, strength=3)
-    assert ca.check()  # t=3 coverage
+    ca = CoveringArray(params, strength=6)
+    assert ca.check()  # t=6 coverage
 
     # merge + dedupe immediately
     added = 0
@@ -92,10 +114,13 @@ for run in range(num_runs):
 
     print(f"Run {run+1}/{num_runs}: added {added} unique rows (pool so far: {len(rows_all)})")
 
+for idx, row in enumerate(rows_all):
+    row["topic_hint"] = TOPIC_HINTS[idx % len(TOPIC_HINTS)]
+
 #%% Inspect coverage
 
-# Tabular view of the design (CORE first, then KNOBS)
-col_order = list(CORE.keys()) + list(KNOBS.keys())
+# Tabular view of the design
+col_order = list(FACTORS.keys()) + ["topic_hint"]
 df = pd.DataFrame(rows_all)[col_order]
 
 # Save the matrix for offline inspection
@@ -113,7 +138,7 @@ for col in col_order:
 #%%
 
 # Load output schema
-with open("paragraph_output_schema__single.json", "r", encoding="utf-8") as jf:
+with open("paragraph_output_schema__single_refined-factors.json", "r", encoding="utf-8") as jf:
     output_schema = json.load(jf)
 
 # Add a method to handle exceptions thrown by improper JSON formatting
@@ -130,18 +155,13 @@ for i, r in enumerate(rows_all, 1):
 
     controls = {
         # CORE
-        "domain": r["domain"],
-        "mode": r["mode"],
+        "genre": r["genre"],
+        "difficulty": r["difficulty"],
+        "coherence_predictability": r["coherence_predictability"],
+        "emotional_valence": r["emotional_valence"],
+        "concreteness": r["concreteness"],
         "tone": r["tone"],
-        "reading_level": r["reading_level"],
-        # KNOBS nested under 'style'
-        "style": {
-            "sentence_length": r["sentence_length"],
-            "figurative_language": r["figurative_language"],
-            "concreteness": r["concreteness"],
-            "viewpoint": r["viewpoint"],
-            "temporal_focus": r["temporal_focus"],
-        }
+        "topic_hint": r["topic_hint"]
     }
 
     success = False
@@ -154,7 +174,7 @@ for i, r in enumerate(rows_all, 1):
                 instructions=SYSTEM_PROMPT,
                 input=json.dumps({"controls": controls}),
                 reasoning={
-                    "effort": "low"
+                    "effort": "medium"
                 },
                 text={
                     "format": {
@@ -202,12 +222,19 @@ for i, r in enumerate(rows_all, 1):
             # ---- end extraction ----
 
             # (optional) sanity checks
-            assert obj.get("domain") == controls["domain"], "Domain mismatch"
+            # (optional) sanity checks
+            assert obj.get("genre") == controls["genre"], "Genre mismatch"
+            assert obj.get("difficulty") == controls["difficulty"], "Difficulty mismatch"
+            assert obj.get("coherence_predictability") == controls["coherence_predictability"], "Coherence/predictability mismatch"
+            assert obj.get("emotional_valence") == controls["emotional_valence"], "Emotional valence mismatch"
+            assert obj.get("concreteness") == controls["concreteness"], "Concreteness mismatch"
+            assert obj.get("tone") == controls["tone"], "Tone mismatch"
+            assert obj.get("topic_hint") == controls["topic_hint"], "Topic hint mismatch"
             assert isinstance(obj.get("text"), str) and len(obj["text"]) > 0, "Missing text"
             assert resp.incomplete_details is None
 
             # Save result
-            with open("../paragraphs_gpt5_1.jsonl", "a", encoding="utf-8") as f:
+            with open("../database_storage/paragraphs_gpt5_1.jsonl", "a", encoding="utf-8") as f:
                 f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
             success = True
@@ -245,5 +272,5 @@ for i, r in enumerate(rows_all, 1):
 
 
 #%% Load JSONL, flatten nested fields (e.g., style.*), and save to CSV
-df = pd.json_normalize(pd.read_json("../paragraphs_gpt5_1.jsonl", lines=True).to_dict(orient="records"))
-df.to_csv("./database_storage/database_12-gpt5_1-full.csv", index=False)
+df = pd.json_normalize(pd.read_json("../database_storage/paragraphs_gpt5_1.jsonl", lines=True).to_dict(orient="records"))
+df.to_csv("../database_storage/database_13-gpt5_1-full.csv", index=False)
