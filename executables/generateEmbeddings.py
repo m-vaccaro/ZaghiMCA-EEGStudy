@@ -29,4 +29,5 @@ df = pd.DataFrame({"embedding": [list(x) for x in embeddings_all]})
 df.to_csv("embeddings.csv")
 
 all_paragraphs = all_paragraphs.assign(embedding=[list(x) for x in embeddings_all])
-all_paragraphs.to_csv(f"./database_storage/database_{database_number:02d}-{database_name}__embeddings-large.csv")
+all_paragraphs.to_csv(f"./database_storage/database_{database_number:02d}-{database_name}__embeddings-large.csv",
+                      index=False)
