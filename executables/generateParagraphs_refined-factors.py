@@ -138,7 +138,7 @@ for col in col_order:
 #%%
 
 # Load output schema
-with open("paragraph_output_schema__single_refined-factors.json", "r", encoding="utf-8") as jf:
+with open("executables/paragraph_output_schema__single_refined-factors.json", "r", encoding="utf-8") as jf:
     output_schema = json.load(jf)
 
 # Add a method to handle exceptions thrown by improper JSON formatting
@@ -234,7 +234,7 @@ for i, r in enumerate(rows_all, 1):
             assert resp.incomplete_details is None
 
             # Save result
-            with open("../database_storage/paragraphs_gpt5_1.jsonl", "a", encoding="utf-8") as f:
+            with open("database_storage/paragraphs_gpt5_1.jsonl", "a", encoding="utf-8") as f:
                 f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
             success = True
@@ -272,5 +272,5 @@ for i, r in enumerate(rows_all, 1):
 
 
 #%% Load JSONL, flatten nested fields (e.g., style.*), and save to CSV
-df = pd.json_normalize(pd.read_json("../database_storage/paragraphs_gpt5_1.jsonl", lines=True).to_dict(orient="records"))
-df.to_csv("../database_storage/database_13-gpt5_1-full.csv", index=False)
+df = pd.json_normalize(pd.read_json("database_storage/paragraphs_gpt5_1.jsonl", lines=True).to_dict(orient="records"))
+df.to_csv("database_storage/database_13-gpt5_1-full.csv", index=False)

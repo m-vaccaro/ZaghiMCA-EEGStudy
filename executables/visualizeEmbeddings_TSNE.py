@@ -2,9 +2,9 @@
 
 #%% Choose which category to color points by
 # Logical options:
-#   "domain", "mode", "tone", "reading_level",
-#   "sentence_length", "figurative_language", "concreteness", "viewpoint", "temporal_focus"
-color_by = "temporal_focus"  # <-- change this to recolor
+#   "genre", "difficulty", "coherence_predictability",
+#   "emotional_valence", "concreteness", "tone", "topic_hint"
+color_by = "topic_hint"  # <-- change this to recolor
 
 #%% Imports and data loading
 import pandas as pd
@@ -15,11 +15,12 @@ import matplotlib
 from matplotlib.lines import Line2D
 from ast import literal_eval
 
-database_number = 11
-database_name = "gpt4o-full"
+database_number = 13
+database_name = "gpt5_1-full"
+embedding_size = "large"
 
 database = pd.read_csv(
-    f"./database_storage/database_{database_number:02d}-{database_name}__embeddings.csv"
+    f"../database_storage/database_{database_number:02d}-{database_name}__embeddings-{embedding_size}.csv"
 )
 
 # Embeddings column assumed to be a stringified list (e.g. "[0.1, 0.2, ...]")
@@ -33,16 +34,14 @@ paragraph_domains = pd.read_csv(
 #%% Map logical category names to actual DataFrame column names
 
 column_map = {
-    "domain": "domain",
-    "mode": "mode",
-    "tone": "tone",
-    "reading_level": "reading_level",
+    "genre": "genre",
+    "difficulty": "difficulty",
+    "coherence_predictability": "coherence_predictability",
     # style.* fields in your dataframe:
-    "sentence_length": "style.sentence_length",
-    "figurative_language": "style.figurative_language",
-    "concreteness": "style.concreteness",
-    "viewpoint": "style.viewpoint",
-    "temporal_focus": "style.temporal_focus",
+    "emotional_valence": "emotional_valence",
+    "concreteness": "concreteness",
+    "tone": "tone",
+    "topic_hint": "topic_hint",
 }
 
 # This is the actual column we will use:
@@ -51,39 +50,31 @@ color_column = column_map[color_by]
 #%% Define category enums and color palettes
 
 category_values = {
-    "domain": [
-        "life_sciences", "physical_sciences", "engineering", "computing",
-        "humanities", "social_sciences", "everyday_scenarios", "nature_travel", "arts_culture"
+    "topic_hint": [
+        "life_sciences", "physical_sciences", "engineering", "computing"
     ],
-    "mode": [
-        "narrative", "expository", "descriptive", "process_explanation", "persuasive"
+    "genre": [
+        "narrative", "expository"
     ],
-    "tone": [
-        "plain", "formal", "technical", "playful", "reflective", "conversational"
+    "difficulty": [
+        "high", "medium", "low"
     ],
-    "reading_level": [
-        "Grade8", "Grade12", "Undergraduate", "Graduate"
+    "coherence_predictability": [
+        "high_coherence_high_predictability", "low_coherence", "high_coherence_low_predictability"
     ],
-    "sentence_length": ["short", "mixed", "long"],
-    "figurative_language": ["none", "low", "medium", "high"],
+    "emotional_valence": ["negative", "positive", "neutral"],
     "concreteness": ["abstract", "mixed", "concrete"],
-    "viewpoint": ["1st", "2nd", "3rd"],
-    "temporal_focus": ["past", "present", "future"],
+    "tone": ["reflective", "technical", "plain"]
 }
 
 category_colors = {
-    "domain": [
-        "tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple",
-        "tab:pink", "tab:cyan", "tab:olive", "tab:brown"
-    ],
-    "mode": ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple"],
-    "tone": ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown"],
-    "reading_level": ["tab:blue", "tab:orange", "tab:green", "tab:red"],
-    "sentence_length": ["tab:blue", "tab:orange", "tab:green"],
-    "figurative_language": ["tab:blue", "tab:orange", "tab:green", "tab:red"],
+    "topic_hint": ["tab:blue", "tab:orange", "tab:green", "tab:red"],
+    "genre": ["tab:blue", "tab:orange"],
+    "difficulty": ["tab:blue", "tab:orange", "tab:green"],
+    "coherence_predictability": ["tab:blue", "tab:orange", "tab:green"],
+    "emotional_valence": ["tab:blue", "tab:orange", "tab:green"],
     "concreteness": ["tab:blue", "tab:orange", "tab:green"],
-    "viewpoint": ["tab:blue", "tab:orange", "tab:green"],
-    "temporal_focus": ["tab:blue", "tab:orange", "tab:green"],
+    "tone": ["tab:blue", "tab:orange", "tab:green"]
 }
 
 labels = category_values[color_by]
@@ -102,10 +93,10 @@ database[f"{color_by}_id"] = (
 #%% Set hyperparameters, create a t-SNE model, and transform the data
 
 final_dims = 2  # Number of dimensions for the final transformation
-perplex = 16    # Perplexity
+perplex = 30    # Perplexity
 r_state = 17    # Random state for repeatable results
 initialization = "random"  # 'random' or 'pca'
-l_rate = 40     # Learning rate
+l_rate = "auto"     # Learning rate
 
 tsne = TSNE(
     n_components=final_dims,
