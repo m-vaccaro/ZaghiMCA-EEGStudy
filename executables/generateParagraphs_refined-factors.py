@@ -7,6 +7,9 @@ from testflows.combinatorics import CoveringArray
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_MCA"))
 
+database_number = 14
+database_name ="gpt5_1-full-shorter_texts"
+
 # List of topics to generate texts for: life_sciences, physical_sciences, engineering, computing, humanities,
 # social_sciences, everyday_scenarios, nature_travel, arts_culture
 
@@ -17,7 +20,7 @@ HARD CONSTRAINTS:
 - Always output a single JSON object as your entire response.
 - The JSON must have these fields: text, genre, difficulty, coherence_predictability, emotional_valence, concreteness, topic_hint, tone, keywords.
 - The value of "text" must be exactly one paragraph of continuous prose (no headings, no bullet points, no dialogue formatting).
-- Length of "text": between 250 and 400 words.
+- Length of "text": between 150 and 200 words.
 - Do NOT mention instructions, labels, field names, or any metadata in the paragraph.
 - The paragraph must be self-contained and understandable on its own.
 
@@ -138,7 +141,7 @@ for col in col_order:
 #%%
 
 # Load output schema
-with open("executables/paragraph_output_schema__single_refined-factors.json", "r", encoding="utf-8") as jf:
+with open("../executables/paragraph_output_schema__single_refined-factors.json", "r", encoding="utf-8") as jf:
     output_schema = json.load(jf)
 
 # Add a method to handle exceptions thrown by improper JSON formatting
@@ -234,7 +237,7 @@ for i, r in enumerate(rows_all, 1):
             assert resp.incomplete_details is None
 
             # Save result
-            with open("database_storage/paragraphs_gpt5_1.jsonl", "a", encoding="utf-8") as f:
+            with open(f"../database_storage/paragraphs_{database_name}", "a", encoding="utf-8") as f:
                 f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
             success = True
@@ -272,5 +275,5 @@ for i, r in enumerate(rows_all, 1):
 
 
 #%% Load JSONL, flatten nested fields (e.g., style.*), and save to CSV
-df = pd.json_normalize(pd.read_json("database_storage/paragraphs_gpt5_1.jsonl", lines=True).to_dict(orient="records"))
-df.to_csv("database_storage/database_13-gpt5_1-full.csv", index=False)
+df = pd.json_normalize(pd.read_json(f"../database_storage/paragraphs_{database_name}", lines=True).to_dict(orient="records"))
+df.to_csv(f"../database_storage/database_{database_number}-{database_name}.csv", index=False)

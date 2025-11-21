@@ -31,11 +31,17 @@ from sklearn.metrics import balanced_accuracy_score, make_scorer
 from sklearn.pipeline import Pipeline
 from sklearn.decomposition import PCA
 
-# STEP 1. Load embeddings database
+import matplotlib.pyplot as plt
+
+# STEP 1. Load embeddings database and set other parameters
 
 database_number = 13
 database_name = "gpt5_1-full"
 embedding_size = "large"
+
+# Parameters for logistic regression
+use_pca = True
+min_cum_variance_pca = 0.8
 
 df = pd.read_csv(f"../database_storage/database_{database_number:02d}-{database_name}__embeddings-{embedding_size}.csv")
 
@@ -43,7 +49,7 @@ df = pd.read_csv(f"../database_storage/database_{database_number:02d}-{database_
 X = np.array(df["embedding"].apply(literal_eval).to_list())
 print("Embeddings shape:", X.shape)
 
-#%% STEP 2. Define which labels to test
+# Define which labels to test
 
 label_columns = [
     "topic_hint",
@@ -55,11 +61,53 @@ label_columns = [
     "tone",
 ]
 
-#%% STEP 3. Set up classifier and cross-validation
+#%% STEP 2. Inspect PCA explained variance (global, across all texts)
 
-# Simple pipeline: (optional PCA) + multinomial logistic regression
-use_pca = True
-n_pca_components = 50  # adjust as needed; must be < n_samples
+# Choose an upper limit on number of components to inspect
+max_components = min(X.shape[1], X.shape[0] - 1)
+print(f"Fitting PCA with up to {max_components} components for variance plot...")
+
+pca_plot = PCA(n_components=max_components, random_state=0)
+pca_plot.fit(X)
+
+explained_var_ratio = pca_plot.explained_variance_ratio_
+cum_explained = np.cumsum(explained_var_ratio)
+
+# Print a quick textual summary
+print("\nFirst 10 components' explained variance ratio:")
+for i, ev in enumerate(explained_var_ratio[:10], start=1):
+    print(f"PC{i:2d}: {ev:.4f}")
+
+print("\nCumulative explained variance at some key points:")
+for k in [10, 20, 50, 100]:
+    if k <= max_components:
+        print(f"  {k:3d} PCs: {cum_explained[k-1]:.4f}")
+
+# Decide how many PCA components to use in the logistic regression based on the cumulative explained variance:
+n_pca_components = np.searchsorted(cum_explained, min_cum_variance_pca) + 1  # +1 because indices start at 0
+
+print(f"\nNumber of PCs to reach >= {min_cum_variance_pca:.0%} variance: {n_pca_components}")
+print(f"Cumulative variance at {n_pca_components} PCs: {cum_explained[n_pca_components-1]:.4f}")
+
+# Plot cumulative explained variance
+plt.figure(figsize=(8, 5))
+plt.plot(
+    np.arange(1, max_components + 1),
+    cum_explained,
+    marker="o",
+    markersize=2,
+    linewidth=1,
+)
+plt.axvline(50)
+plt.axhline(0.8)
+plt.xlabel("Number of PCA components")
+plt.ylabel("Cumulative explained variance")
+plt.title("PCA cumulative explained variance of text embeddings")
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+
+#%% STEP 3. Set up classifier and cross-validation
 
 # Note: While "multinomial" is not explicitly specified in the logistic regression, sklearn automatically does
 # multinomial for n_classes >= 3.

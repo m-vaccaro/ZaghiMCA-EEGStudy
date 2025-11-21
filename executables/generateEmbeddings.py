@@ -5,11 +5,11 @@ import pandas as pd
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_MCA"))
 
-database_number = 13
-database_name = "gpt5_1-full"
+database_number = 14
+database_name = "gpt5_1-full-shorter_texts"
 
 # Compile the paragraphs in a list to create a batch embedding request API request.
-all_paragraphs = pd.read_csv(f"./database_storage/database_{database_number:02d}-{database_name}.csv")
+all_paragraphs = pd.read_csv(f"../database_storage/database_{database_number:02d}-{database_name}.csv")
 paragraph_list = all_paragraphs['text'].tolist()
 
 #%% Create embeddings
@@ -29,5 +29,5 @@ df = pd.DataFrame({"embedding": [list(x) for x in embeddings_all]})
 df.to_csv("embeddings.csv")
 
 all_paragraphs = all_paragraphs.assign(embedding=[list(x) for x in embeddings_all])
-all_paragraphs.to_csv(f"./database_storage/database_{database_number:02d}-{database_name}__embeddings-large.csv",
+all_paragraphs.to_csv(f"../database_storage/database_{database_number:02d}-{database_name}__embeddings-large.csv",
                       index=False)
