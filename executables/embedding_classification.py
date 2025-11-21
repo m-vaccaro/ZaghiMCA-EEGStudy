@@ -25,9 +25,15 @@ import numpy as np
 from ast import literal_eval
 
 from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.model_selection import StratifiedKFold, cross_val_score, cross_val_predict
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import balanced_accuracy_score, make_scorer
+from sklearn.metrics import (
+    balanced_accuracy_score,
+    make_scorer,
+    confusion_matrix,
+    classification_report,
+    f1_score
+)
 from sklearn.pipeline import Pipeline
 from sklearn.decomposition import PCA
 
@@ -98,8 +104,8 @@ plt.plot(
     markersize=2,
     linewidth=1,
 )
-plt.axvline(50)
-plt.axhline(0.8)
+#plt.axvline(50)
+#plt.axhline(0.8)
 plt.xlabel("Number of PCA components")
 plt.ylabel("Cumulative explained variance")
 plt.title("PCA cumulative explained variance of text embeddings")
@@ -169,3 +175,27 @@ for col in label_columns:
     print(f"Chance level: {chance_level:.3f}")
     print(f"Accuracy: mean={acc_scores.mean():.3f}, std={acc_scores.std():.3f}")
     print(f"Balanced accuracy: mean={bal_acc_scores.mean():.3f}, std={bal_acc_scores.std():.3f}")
+
+
+# Cross-validated predictions for confusion matrix & other metrics
+
+    # cross_val_predict trains/validates like cross_val_score, but returns
+    # the out-of-fold predictions for each sample
+    y_pred_cv = cross_val_predict(clf, X_sub, y, cv=cv)
+
+    # Confusion matrix (using integer labels 0,...,n_classes-1)
+    cm = confusion_matrix(y, y_pred_cv, labels=np.arange(n_classes))
+
+    # Wrap it in a DataFrame with class names for readability
+    cm_df = pd.DataFrame(cm, index=le.classes_, columns=le.classes_)
+
+    print("\nConfusion matrix (rows=true, cols=predicted):")
+    print(cm_df.to_string())
+
+    # Additional summary metrics (macro F1 is nice with class imbalance)
+    f1_macro = f1_score(y, y_pred_cv, average="macro")
+    print(f"\nMacro F1 score: {f1_macro:.3f}")
+
+    # Full classification report (per-class precision/recall/F1)
+    print("\nClassification report:")
+    print(classification_report(y, y_pred_cv, target_names=le.classes_))

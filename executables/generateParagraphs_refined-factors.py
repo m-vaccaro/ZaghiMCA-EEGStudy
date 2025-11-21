@@ -7,8 +7,8 @@ from testflows.combinatorics import CoveringArray
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_MCA"))
 
-database_number = 14
-database_name ="gpt5_1-full-shorter_texts"
+database_number = 15
+database_name ="gpt5_1-full-75_to_150_words"
 
 # List of topics to generate texts for: life_sciences, physical_sciences, engineering, computing, humanities,
 # social_sciences, everyday_scenarios, nature_travel, arts_culture
@@ -20,7 +20,7 @@ HARD CONSTRAINTS:
 - Always output a single JSON object as your entire response.
 - The JSON must have these fields: text, genre, difficulty, coherence_predictability, emotional_valence, concreteness, topic_hint, tone, keywords.
 - The value of "text" must be exactly one paragraph of continuous prose (no headings, no bullet points, no dialogue formatting).
-- Length of "text": between 150 and 200 words.
+- Length of "text": between 75 and 150 words.
 - Do NOT mention instructions, labels, field names, or any metadata in the paragraph.
 - The paragraph must be self-contained and understandable on its own.
 
