@@ -5,8 +5,8 @@ import pandas as pd
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_MCA"))
 
-database_number = 14
-database_name = "gpt5_1-full-shorter_texts"
+database_number = 17
+database_name = "gpt5_1-full-25_to_50_words"
 
 # Compile the paragraphs in a list to create a batch embedding request API request.
 all_paragraphs = pd.read_csv(f"../database_storage/database_{database_number:02d}-{database_name}.csv")
