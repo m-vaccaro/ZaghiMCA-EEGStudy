@@ -7,8 +7,8 @@ from testflows.combinatorics import CoveringArray
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_MCA"))
 
-database_number = 17
-database_name ="gpt5_1-full-25_to_50_words"
+database_number = 18
+database_name ="gpt5_1-full-120_to_150_words"
 
 # List of topics to generate texts for: life_sciences, physical_sciences, engineering, computing, humanities,
 # social_sciences, everyday_scenarios, nature_travel, arts_culture
@@ -20,9 +20,10 @@ HARD CONSTRAINTS:
 - Always output a single JSON object as your entire response.
 - The JSON must have these fields: text, genre, difficulty, coherence_predictability, emotional_valence, concreteness, topic_hint, tone, keywords.
 - The value of "text" must be exactly one paragraph of continuous prose (no headings, no bullet points, no dialogue formatting).
-- Length of "text": between 25 and 50 words.
+- Length of "text": between 120 and 150 words.
 - Do NOT mention instructions, labels, field names, or any metadata in the paragraph.
 - The paragraph must be self-contained and understandable on its own.
+- Do not use em-dashes in the texts.
 
 GENERAL CONTEXT:
 - Paragraphs should involve STEM or academic themes (science, technology, engineering, mathematics, study, research, or student life), guided by the topic_hint the user provides.
@@ -72,20 +73,18 @@ FACTORS = {
     "coherence_predictability": ["high_coherence_high_predictability", "high_coherence_low_predictability", "low_coherence"],
     "emotional_valence": ["negative", "neutral", "positive"],
     "concreteness": ["abstract", "mixed", "concrete"],
-    "tone": ["plain", "technical", "reflective"]
+    "tone": ["plain", "technical", "reflective"],
+    "topic_hint": ["life_sciences", "physical_sciences", "engineering", "computing"]
 }
-
-TOPIC_HINTS = ["life_sciences",
-               "physical_sciences",
-               "engineering",
-               "computing"]
 
 canonical_names = list(FACTORS.keys())
 
-# num_runs independent t=6 runs over FACTORS, then merge + deduplicate
+# num_runs independent t=ca_strength runs over FACTORS, then merge + deduplicate
 # Note: If t = num. factors, then the space necessarily covers all possible combinations.
 
-num_runs = 2          # bump this to 10–20 if you want a bigger, richer pool
+ca_strength = 3       # Defines a t = ca_strength covering array
+
+num_runs = 1          # bump this to 10–20 if you want a bigger, richer pool
 base_seed = 23498     # change to vary the sequence
 
 rows_all = []
@@ -101,10 +100,10 @@ for run in range(num_runs):
     for k in canonical_names:
         rng.shuffle(value_orders[k])
 
-    # build a t=6 covering array for this ordering
+    # build a t=ca_strength covering array for this ordering
     params = {name: value_orders[name] for name in name_order}
-    ca = CoveringArray(params, strength=6)
-    assert ca.check()  # t=6 coverage
+    ca = CoveringArray(params, strength=ca_strength)
+    assert ca.check()  # t=ca_strength coverage
 
     # merge + dedupe immediately
     added = 0
@@ -116,9 +115,6 @@ for run in range(num_runs):
             added += 1
 
     print(f"Run {run+1}/{num_runs}: added {added} unique rows (pool so far: {len(rows_all)})")
-
-for idx, row in enumerate(rows_all):
-    row["topic_hint"] = TOPIC_HINTS[idx % len(TOPIC_HINTS)]
 
 #%% Inspect coverage
 
