@@ -119,7 +119,7 @@ for run in range(num_runs):
 #%% Inspect coverage
 
 # Tabular view of the design
-col_order = list(FACTORS.keys()) + ["topic_hint"]
+col_order = list(FACTORS.keys())
 df = pd.DataFrame(rows_all)[col_order]
 
 # Save the matrix for offline inspection
