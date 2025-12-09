@@ -28,7 +28,7 @@ embedding_matrix = np.array(database.embedding.apply(literal_eval).to_list())
 
 # Optional: load paragraph domains (not used in plotting but kept from original code)
 paragraph_domains = pd.read_csv(
-    "../database_storage/database_with_embeddings__50Texts.csv"
+    "../database_storage/old_databases/database_with_embeddings__50Texts.csv"
 ).domain.to_list()
 
 #%% Map logical category names to actual DataFrame column names

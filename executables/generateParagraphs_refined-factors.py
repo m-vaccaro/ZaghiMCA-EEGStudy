@@ -116,6 +116,27 @@ for run in range(num_runs):
 
     print(f"Run {run+1}/{num_runs}: added {added} unique rows (pool so far: {len(rows_all)})")
 
+# === Add practice (warm-up) rows with random *unique* combinations ===
+num_practice = 2 # The covering array generates 63 combinations with t=3
+practice_rows = []
+
+rng_practice = random.Random(base_seed + 999)  # different seed from CA runs
+
+while len(practice_rows) < num_practice:
+    combo = {name: rng_practice.choice(FACTORS[name]) for name in canonical_names}
+    key = tuple((k, combo[k]) for k in canonical_names)
+
+    if key in seen:
+        # already used by main design or another practice row -> try again
+        continue
+
+    seen.add(key)
+    practice_rows.append(combo)
+
+print(f"\nGenerated {len(practice_rows)} practice rows (unique from main design).")
+print(pd.DataFrame(practice_rows))
+
+
 #%% Inspect coverage
 
 # Tabular view of the design
@@ -137,7 +158,7 @@ for col in col_order:
 #%%
 
 # Load output schema
-with open("../executables/paragraph_output_schema__single_refined-factors.json", "r", encoding="utf-8") as jf:
+with open("./executables/paragraph_output_schema__single_refined-factors.json", "r", encoding="utf-8") as jf:
     output_schema = json.load(jf)
 
 # Add a method to handle exceptions thrown by improper JSON formatting
@@ -145,10 +166,138 @@ MAX_RETRIES = 4
 BACKOFF_SEC = [0.5, 1, 2, 4]  # wait times of retries in case of errors associated with rate limits, etc.
 
 duration_total = 0.0
-N_total = len(rows_all)
+N_total = num_practice
 
 global_start = time.time()
 
+# generate practice trials and save in a separate file
+for i, r in enumerate(practice_rows, 1):
+    startTime = time.time()
+    controls = {
+        "genre": r["genre"],
+        "difficulty": r["difficulty"],
+        "coherence_predictability": r["coherence_predictability"],
+        "emotional_valence": r["emotional_valence"],
+        "concreteness": r["concreteness"],
+        "tone": r["tone"],
+        "topic_hint": r["topic_hint"],
+    }
+
+    success = False
+    raw = None  # for debug saves
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            resp = client.responses.create(
+                model="gpt-5.1",
+                instructions=SYSTEM_PROMPT,
+                input=json.dumps({"controls": controls}),
+                reasoning={
+                    "effort": "medium"
+                },
+                text={
+                    "format": {
+                        "type": "json_schema",
+                        "name": "eeg_paragraph",
+                        "schema": output_schema,
+                        "strict": True
+                    }
+                }
+            )
+
+            # ---- robust extraction across response shapes ----
+            obj = None
+            raw = getattr(resp, "output_text", None)
+
+            # New Responses shape
+            out_list = getattr(resp, "output", None)
+            if obj is None and isinstance(out_list, list) and out_list:
+                content = getattr(out_list[0], "content", None)
+                if isinstance(content, list) and content:
+                    frag = content[0]
+                    parsed = getattr(frag, "parsed", None)
+                    if parsed is not None:
+                        obj = parsed
+                    else:
+                        raw = getattr(frag, "text", raw)
+
+            # Legacy chat-like fallback
+            if obj is None and (raw is None) and hasattr(resp, "choices"):
+                msg = getattr(resp.choices[0], "message", None)
+                if msg is not None:
+                    parsed = getattr(msg, "parsed", None)
+                    if parsed is not None:
+                        obj = parsed
+                    else:
+                        raw = getattr(msg, "content", raw)
+
+            # Final parse
+            if obj is None:
+                if raw is None:
+                    raise ValueError("No JSON text available in response.")
+                if isinstance(raw, (bytes, bytearray)):
+                    raw = raw.decode("utf-8", "replace")
+                obj = json.loads(raw)
+            # ---- end extraction ----
+
+            # (optional) sanity checks
+            assert obj.get("genre") == controls["genre"], "Genre mismatch"
+            assert obj.get("difficulty") == controls["difficulty"], "Difficulty mismatch"
+            assert obj.get("coherence_predictability") == controls[
+                "coherence_predictability"], "Coherence/predictability mismatch"
+            assert obj.get("emotional_valence") == controls["emotional_valence"], "Emotional valence mismatch"
+            assert obj.get("concreteness") == controls["concreteness"], "Concreteness mismatch"
+            assert obj.get("tone") == controls["tone"], "Tone mismatch"
+            assert obj.get("topic_hint") == controls["topic_hint"], "Topic hint mismatch"
+            assert isinstance(obj.get("text"), str) and len(obj["text"]) > 0, "Missing text"
+            assert resp.incomplete_details is None
+
+            # Save result
+            with open(f"./database_storage/paragraphs_{database_name}__practice.jsonl", "a", encoding="utf-8") as f:
+                f.write(json.dumps(obj, ensure_ascii=False) + "\n")
+
+            success = True
+            break  # exit retry loop
+
+        except json.JSONDecodeError as e:
+            dbg_path = f"debug_response_{i}_try{attempt+1}.txt"
+            try:
+                with open(dbg_path, "w", encoding="utf-8") as dbg:
+                    dbg.write(raw if raw is not None else "<no raw text available>")
+                print(f"[warn] JSON parse failed at item {i} (try {attempt+1}): {e}. Saved {dbg_path}")
+            except Exception:
+                print(f"[warn] JSON parse failed at item {i} (try {attempt+1}): {e}. (Could not save debug file.)")
+            time.sleep(BACKOFF_SEC[min(attempt, len(BACKOFF_SEC)-1)])
+
+        except Exception as e:
+            # Network/timeout/rate-limit/etc.
+            print(f"[warn] API error at item {i} (try {attempt+1}): {e}")
+            time.sleep(BACKOFF_SEC[min(attempt, len(BACKOFF_SEC)-1)])
+
+    endTime = time.time()
+    duration = endTime - startTime
+    duration_total += duration
+    duration_average = duration_total / i
+    numRemaining = N_total - i
+    tRemaining = (numRemaining * duration_average) / 60
+    tTotal = (time.time() - global_start) / 60
+
+    if success:
+        print(f"Generated {i}/{N_total} in {duration:.2f}s. // Approx. {tRemaining:.2f} min remaining. // Total time: {tTotal:.2f} min.")
+    else:
+        print(f"[skip] Item {i} skipped after {MAX_RETRIES} attempts. Approx. {tRemaining:.2f} min remaining.")
+
+    time.sleep(0.1)  # tiny pause to be gentle on rate limits
+
+df = pd.json_normalize(pd.read_json(f"./database_storage/paragraphs_{database_name}__practice.jsonl", lines=True).to_dict(orient="records"))
+df.to_csv(f"./database_storage/database_{database_number}-{database_name}__practice.csv", index=False)
+
+#%% generate for main dataset
+
+duration_total = 0.0
+N_total = len(rows_all)
+
+global_start = time.time()
 for i, r in enumerate(rows_all, 1):
     startTime = time.time()
 
@@ -220,7 +369,6 @@ for i, r in enumerate(rows_all, 1):
                 obj = json.loads(raw)
             # ---- end extraction ----
 
-            # (optional) sanity checks
             # (optional) sanity checks
             assert obj.get("genre") == controls["genre"], "Genre mismatch"
             assert obj.get("difficulty") == controls["difficulty"], "Difficulty mismatch"
