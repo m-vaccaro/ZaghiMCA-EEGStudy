@@ -4,6 +4,7 @@ from openai import OpenAI
 import time
 import pandas as pd
 from testflows.combinatorics import CoveringArray
+import itertools
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_MCA"))
 
@@ -117,21 +118,44 @@ for run in range(num_runs):
     print(f"Run {run+1}/{num_runs}: added {added} unique rows (pool so far: {len(rows_all)})")
 
 # === Add practice (warm-up) rows with random *unique* combinations ===
-num_practice = 2 # The covering array generates 63 combinations with t=3
+num_practice = 2 # The covering array generates 63 combinations with t=3, so add 2 to get total 65 paragraphs
 practice_rows = []
 
-rng_practice = random.Random(base_seed + 999)  # different seed from CA runs
+rng_practice = random.Random(base_seed + 198)  # different seed from CA runs
 
-while len(practice_rows) < num_practice:
+# Pick the first practice row randomly:
+while len(practice_rows) < 1:
     combo = {name: rng_practice.choice(FACTORS[name]) for name in canonical_names}
     key = tuple((k, combo[k]) for k in canonical_names)
 
     if key in seen:
-        # already used by main design or another practice row -> try again
         continue
 
     seen.add(key)
     practice_rows.append(combo)
+
+first_practice = practice_rows[0]
+
+# Now develop a second practice that is not in 'seen' and differs from 'frist_practice' on every factor:
+candidates = []
+for values in itertools.product(*[FACTORS[name] for name in canonical_names]):
+    combo = dict(zip(canonical_names, values))
+    key = tuple((k, combo[k]) for k in canonical_names)
+
+    if key in seen:
+        continue
+
+    # requre that every factor differs from the first practice row
+    if all(combo[name] != first_practice[name] for name in canonical_names):
+        candidates.append(combo)
+
+if not candidates:
+    raise RuntimeError("No valid candidate found for a maximally different practice row.")
+
+second_practice = rng_practice.choice(candidates)
+key_second = tuple((k, second_practice[k]) for k in canonical_names)
+seen.add(key_second)
+practice_rows.append(second_practice)
 
 print(f"\nGenerated {len(practice_rows)} practice rows (unique from main design).")
 print(pd.DataFrame(practice_rows))
@@ -158,7 +182,7 @@ for col in col_order:
 #%%
 
 # Load output schema
-with open(".executables/paragraph_output_schema__single_refined-factors.json", "r", encoding="utf-8") as jf:
+with open("../executables/paragraph_output_schema__single_refined-factors.json", "r", encoding="utf-8") as jf:
     output_schema = json.load(jf)
 
 # Add a method to handle exceptions thrown by improper JSON formatting
