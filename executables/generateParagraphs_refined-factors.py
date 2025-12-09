@@ -158,7 +158,7 @@ for col in col_order:
 #%%
 
 # Load output schema
-with open("./executables/paragraph_output_schema__single_refined-factors.json", "r", encoding="utf-8") as jf:
+with open(".executables/paragraph_output_schema__single_refined-factors.json", "r", encoding="utf-8") as jf:
     output_schema = json.load(jf)
 
 # Add a method to handle exceptions thrown by improper JSON formatting
@@ -253,7 +253,7 @@ for i, r in enumerate(practice_rows, 1):
             assert resp.incomplete_details is None
 
             # Save result
-            with open(f"./database_storage/paragraphs_{database_name}__practice.jsonl", "a", encoding="utf-8") as f:
+            with open(f"../database_storage/paragraphs_{database_name}__practice.jsonl", "a", encoding="utf-8") as f:
                 f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
             success = True
@@ -289,8 +289,8 @@ for i, r in enumerate(practice_rows, 1):
 
     time.sleep(0.1)  # tiny pause to be gentle on rate limits
 
-df = pd.json_normalize(pd.read_json(f"./database_storage/paragraphs_{database_name}__practice.jsonl", lines=True).to_dict(orient="records"))
-df.to_csv(f"./database_storage/database_{database_number}-{database_name}__practice.csv", index=False)
+df = pd.json_normalize(pd.read_json(f"../database_storage/paragraphs_{database_name}__practice.jsonl", lines=True).to_dict(orient="records"))
+df.to_csv(f"../database_storage/database_{database_number}-{database_name}__practice.csv", index=False)
 
 #%% generate for main dataset
 
