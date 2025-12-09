@@ -1,0 +1,53 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "text": {
+      "type": "string"
+    },
+
+    "genre": {
+      "enum": ["narrative", "expository"]
+    },
+
+    "difficulty": {
+      "enum": ["low", "high"]
+    },
+
+    "predictability": {
+      "enum": ["low", "high"]
+    },
+
+    "emotional_valence": {
+      "enum": ["negative", "neutral", "positive"]
+    },
+
+    "concreteness": {
+      "enum": ["abstract", "concrete"]
+    },
+
+    "tone": {
+      "enum": ["plain", "reflective"]
+    },
+
+    "topic_hint": {
+      "enum": [
+        "life_sciences",
+        "physical_sciences",
+        "engineering",
+        "computing"
+      ]
+    }
+  },
+
+  "required": [
+    "text",
+    "genre",
+    "difficulty",
+    "predictability",
+    "emotional_valence",
+    "concreteness",
+    "topic_hint",
+    "tone"
+  ]
+}

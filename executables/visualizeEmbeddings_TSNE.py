@@ -15,8 +15,8 @@ import matplotlib
 from matplotlib.lines import Line2D
 from ast import literal_eval
 
-database_number = 17
-database_name = "gpt5_1-full-25_to_50_words"
+database_number = 18
+database_name = "gpt5_1-full-120_to_150_words"
 embedding_size = "large"
 
 database = pd.read_csv(
@@ -94,9 +94,9 @@ for color_by in list_categories:
     #%% Set hyperparameters, create a t-SNE model, and transform the data
 
     final_dims = 2  # Number of dimensions for the final transformation
-    perplex = 30    # Perplexity
+    perplex = 15    # Perplexity
     r_state = 17    # Random state for repeatable results
-    initialization = "random"  # 'random' or 'pca'
+    initialization = "pca"  # 'random' or 'pca'
     l_rate = "auto"     # Learning rate
 
     tsne = TSNE(

@@ -3,7 +3,7 @@
 #   topic_hint: life_sciences, physical_sciences, engineering, and computing
 #   genre: narrative, expository
 #   difficulty: low, medium, high
-#   coherence_predictability: high_coherence_high_predictability, high_coherence_low_predictability, low_coherence
+#   predictability: high, low
 #   emotional_valence: negative, neutral, positive
 #   concreteness: abstract, mixed, concrete
 #   tone: plain, technical, reflective
@@ -41,8 +41,8 @@ import matplotlib.pyplot as plt
 
 # STEP 1. Load embeddings database and set other parameters
 
-database_number = 17
-database_name = "gpt5_1-full-25_to_50_words"
+database_number = 19
+database_name = "gpt5_1-full-120_to_150_words"
 embedding_size = "large"
 
 # Parameters for logistic regression
@@ -61,7 +61,7 @@ label_columns = [
     "topic_hint",
     "genre",
     "difficulty",
-    "coherence_predictability",
+    "predictability",
     "emotional_valence",
     "concreteness",
     "tone",
@@ -117,9 +117,10 @@ plt.show()
 
 # Note: While "multinomial" is not explicitly specified in the logistic regression, sklearn automatically does
 # multinomial for n_classes >= 3.
+n_pca_components = 28
 if use_pca:
     clf = Pipeline([
-        ("pca", PCA(n_components=min(n_pca_components, X.shape[0] - 1), random_state=0)),
+        ("pca", PCA(n_components=n_pca_components, random_state=0)),
         ("logreg", LogisticRegression(
             solver="lbfgs",
             penalty="l2",
