@@ -1,0 +1,8 @@
+,genre,difficulty,predictability,emotional_valence,concreteness,tone,topic_hint
+genre,1.0,1.0,1.0,2.0,1.0,1.0,3.0
+difficulty,1.0,1.0,1.0,2.0,1.0,1.0,3.0
+predictability,1.0,1.0,1.0,2.0,1.0,1.0,3.0
+emotional_valence,2.0,2.0,2.0,4.0,2.0,2.0,6.0
+concreteness,1.0,1.0,1.0,2.0,1.0,1.0,3.0
+tone,1.0,1.0,1.0,2.0,1.0,1.0,3.0
+topic_hint,3.0,3.0,3.0,6.0,3.0,3.0,9.0
