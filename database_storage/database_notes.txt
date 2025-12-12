@@ -1,0 +1,9 @@
+# Database 18: generated using gpt-5.1 and used the old definition of dimensions (several dimensions were later reduced
+to binary to improve the contrast). DATE: DECEMBER 4, 2025
+
+# Database 19: generated using gpt-5.1 and used the new definition of dimensions (several dimensions were reduced to
+binary (e.g., high vs low without a medium category) to improve the contrast. DATE: DECEMBER 9, 2025
+
+# Database 20: generated with same system prompt as database 19 using gpt-5.2. DATE: DECEMBER 12, 2025
+
+# Database 21: generated with system prompt that is supposedly optimized for gpt-5.2 using the prompt optimizer

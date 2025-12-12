@@ -5,17 +5,20 @@ import time
 import pandas as pd
 from testflows.combinatorics import CoveringArray
 import itertools
+import random
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_MCA"))
 
-database_number = 19
-database_name ="gpt5_1-full-120_to_150_words"
+database_number = 20
+database_name ="gpt5_2-full-120_to_150_words"
+
+gpt_model = "gpt-5.2-2025-12-11"
 
 # List of topics to generate texts for: life_sciences, physical_sciences, engineering, computing, humanities,
 # social_sciences, everyday_scenarios, nature_travel, arts_culture
 
 # Define messages
-SYSTEM_PROMPT = """You generate single-paragraph texts and a small amount of metadata following the given JSON format.
+SYSTEM_PROMPT = f"""You generate single-paragraph texts and a small amount of metadata following the given JSON format.
 
 HARD CONSTRAINTS:
 - Always output a single JSON object as your entire response.
@@ -214,7 +217,7 @@ for i, r in enumerate(practice_rows, 1):
     for attempt in range(MAX_RETRIES):
         try:
             resp = client.responses.create(
-                model="gpt-5.1-2025-11-13",
+                model=gpt_model,
                 instructions=SYSTEM_PROMPT,
                 input=json.dumps({"controls": controls}),
                 reasoning={
@@ -343,7 +346,7 @@ for i, r in enumerate(rows_all, 1):
     for attempt in range(MAX_RETRIES):
         try:
             resp = client.responses.create(
-                model="gpt-5.1-2025-11-13",
+                model=gpt_model,
                 instructions=SYSTEM_PROMPT,
                 input=json.dumps({"controls": controls}),
                 reasoning={

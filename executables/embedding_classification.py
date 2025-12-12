@@ -41,8 +41,8 @@ import matplotlib.pyplot as plt
 
 # STEP 1. Load embeddings database and set other parameters
 
-database_number = 19
-database_name = "gpt5_1-full-120_to_150_words"
+database_number = 21
+database_name = "gpt5_2-full-120_to_150_words"
 embedding_size = "large"
 
 # Parameters for logistic regression
