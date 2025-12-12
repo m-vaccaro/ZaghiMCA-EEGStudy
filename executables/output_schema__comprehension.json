@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "question": {"type":  "string"},
+    "choices": {
+      "type":  "object",
+      "additionalProperties": false,
+      "properties":  {
+        "A": {"type":  "string"},
+        "B": {"type":  "string"},
+        "C": {"type":  "string"},
+        "D": {"type":  "string"}
+      },
+    "required":  ["A","B","C","D"]
+    },
+    "correct_answer": {
+      "type": "string",
+      "enum": ["A","B","C","D"]
+    },
+    "explanation": {"type": "string"}
+  },
+  "required": ["question","choices","correct_answer","explanation"]
+}
