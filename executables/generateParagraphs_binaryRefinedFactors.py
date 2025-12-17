@@ -9,10 +9,10 @@ import random
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_MCA"))
 
-database_number = 20
-database_name ="gpt5_2-full-120_to_150_words"
+database_number = 19
+database_name ="gpt5_1-full-120_to_150_words"
 
-gpt_model = "gpt-5.2-2025-12-11"
+gpt_model = "gpt-5.1-2025-11-13"
 
 # List of topics to generate texts for: life_sciences, physical_sciences, engineering, computing, humanities,
 # social_sciences, everyday_scenarios, nature_travel, arts_culture
@@ -281,7 +281,13 @@ for i, r in enumerate(practice_rows, 1):
             assert resp.incomplete_details is None
 
             # Save result
-            with open(f"../database_storage/paragraphs_{database_name}__practice.jsonl", "a", encoding="utf-8") as f:
+            if i == 1:
+                mthd = "w"
+
+            else:
+                mthd = "a"
+
+            with open(f"../database_storage/paragraphs_{database_name}__practice.jsonl", mthd, encoding="utf-8") as f:
                 f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
             success = True

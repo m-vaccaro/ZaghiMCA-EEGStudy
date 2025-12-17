@@ -9,14 +9,13 @@
       "properties":  {
         "A": {"type":  "string"},
         "B": {"type":  "string"},
-        "C": {"type":  "string"},
-        "D": {"type":  "string"}
+        "C": {"type":  "string"}
       },
-    "required":  ["A","B","C","D"]
+    "required":  ["A","B","C"]
     },
     "correct_answer": {
       "type": "string",
-      "enum": ["A","B","C","D"]
+      "enum": ["A","B","C"]
     },
     "explanation": {"type": "string"}
   },

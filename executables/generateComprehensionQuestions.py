@@ -22,7 +22,7 @@ database_name = "gpt5_1-full-120_to_150_words__embeddings-large"
 db = pd.read_csv(f"../database_storage/database_{database_number}-{database_name}.csv")
 db_text = db["text"].tolist()
 
-poss_answers = ["A", "B", "C", "D"]
+poss_answers = ["A", "B", "C"]
 
 # Define System and User messages
 # The SYSTEM_PROMPT should:
@@ -30,9 +30,9 @@ poss_answers = ["A", "B", "C", "D"]
 #   Question difficulty should be easy. Ideally the reader should be able to answer the question from just one read through the text.
 #   Be explicit that the question is about the paragraph CONTENT, not the tone/etc. Again, readers must be able to answer the question with only the information given.
 #   Still target core understanding of the text. Don't want trivial surface-level questions like "What was the main character's name?"
-#   Require that one of A/B/C/D be correct (no all of the above)
+#   Require that one of A/B/C be correct (no all of the above)
 #   Make sure questions are not worded as double negatives and that they are not opinion-based questions
-#   Be designed to reduce guessing from participants/other cues in answers (e.g., all four options should be similar in length and style; the correct answer shouldn't be the only one that is specific, etc.)
+#   Be designed to reduce guessing from participants/other cues in answers (e.g., all options should be similar in length and style; the correct answer shouldn't be the only one that is specific, etc.)
 
 SYSTEM_PROMPT = f"""You are an assistant that writes multiple-choice reading comprehension questions for short paragraphs.
 
@@ -40,24 +40,25 @@ YOUR ROLE AND TASK
 - You are given exactly one paragraph of text.
 - Your job is to write one multiple-choice question that tests understanding of that paragraph.
 - The question you generate must be answerable using ONLY the information in the paragraph. Those answering these questions should never need to consult outside information to determine the correct answer.
-- You must also generate the four answer options, identify which option is correct, and give a brief explanation for why each answer choice is right or wrong.
+- You must also generate the three answer options, identify which option is correct, and give a brief explanation for why each answer choice is right or wrong.
 
 QUESTION DIFFICULTY AND FOCUS
-- Aim for EASY difficulty. A careful reader should be able to answer correctly after reading through the paragraph once.
+- Aim for MEDIUM difficulty. A careful reader should be able to answer correctly after reading through the paragraph once.
 - The question must target core understanding of the paragraph (e.g., main idea, key fact, or causal link).
 - Avoid trivial surface-level questions such as asking only for a name, a single number, or an isolated word unless that detail is central to understanding.
 - The question must be about the CONTENT of the paragraph, not its tone, style, difficulty, or other writing characteristics.
 - Do NOT ask about opinions, personal judgments, or anything that cannot be clearly determined from the paragraph.
 - There must only be one correct answer.
+- Do not use em-dashes.
 
-ANSWER CHOICES (A–D)
-- You must provide exactly FOUR answer options, labeled A, B, C, and D in the JSON object.
-- Exactly ONE of A/B/C/D must be correct. The other three must be clearly incorrect for someone who has understood the paragraph.
+ANSWER CHOICES (A–C)
+- You must provide exactly THREE answer options, labeled A, B, and C in the JSON object.
+- Exactly ONE of A/B/C must be correct. The other three must be clearly incorrect for someone who has understood the paragraph.
 - Do NOT use “all of the above”, “none of the above”, or similar meta-options.
-- Write the options so that all four answer choices are similar in length, similar in level of detail, and similar in style and tone.
+- Write the options so that all answer choices are similar in length, similar in level of detail, and similar in style and tone.
     - The correct option should NOT stand out by being much longer, more specific, more hedged, or obviously different from the other options.
-- Avoid yes/no questions. Write questions with four contentful answer options instead.
-- The answer choice label is embedded in the JSON schema. Do not add "A.", "B.", "C.", or "D." to the answer choices you generate.
+- Avoid yes/no questions. Write questions with three contentful answer options instead.
+- The answer choice label is embedded in the JSON schema. Do not add "A.", "B.", or "C." to the answer choices you generate.
 - The user will specify what the correct answer should be in their message to you.
 
 WORDING AND CLARITY
@@ -72,8 +73,8 @@ OUTPUT FORMAT (STRICT)
 - Always output a single JSON object as your entire response.
 - The JSON object must have these fields:
   - "question": string — the question text.
-  - "choices": object — with exactly four keys: "A", "B", "C", and "D". Each value is the answer text (without letter prefixes).
-  - "correct_answer": string — exactly one of "A", "B", "C", or "D".
+  - "choices": object — with exactly three keys: "A", "B", and "C". Each value is the answer text (without letter prefixes).
+  - "correct_answer": string — exactly one of "A", "B", or "C".
   - "explanation": string — 1–3 sentences explaining why the correct option is right and why the others are wrong, based only on the paragraph.
 - Do NOT include any text outside the JSON object.
 - Do NOT wrap the JSON in backticks or markdown.
@@ -212,4 +213,4 @@ Write one easy reading comprehension question about this paragraph that can be a
 mcqs = pd.read_json(f"../database_storage/mcqs_database_{database_number}-{database_name}.jsonl", lines=True)
 existing = pd.read_csv(f"../database_storage/database_{database_number}-{database_name}.csv")
 merged = pd.concat([existing, mcqs], axis=1)
-merged.to_csv(f"../database_storage/database_{database_number}-{database_name}__mcqs.csv", index=False)
+merged.to_csv(f"../database_storage/database_{database_number}-{database_name}__mcqs_3q.csv", index=False)
